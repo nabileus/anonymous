@@ -19,16 +19,18 @@ This is a Telegram bot that performs various functions:
 
 ```shell
 git clone https://github.com/your-repository.git
-```shell
+```
 
 2.Install the required Python packages:
+```shell
     pip install -r requirements.txt
-
+```
 3.Replace 'YOUR_TELEGRAM_BOT_TOKEN' in the code with your actual bot token.
 4.Replace 'YOUR_CHANNEL_ID' in the code with the ID of the channel where you want to send the files.
 5.Run the bot:
+```shell
     python bot.py
-    
+```
     
 Usage
 The bot responds to the following commands:
