@@ -18,7 +18,7 @@ This is a Telegram bot that performs various functions:
 1. Clone the repository:
 
 ```shell
-git clone https://github.com/your-repository.git
+git clone https://github.com/nabileus/anonymous
 ```
 
 2.Install the required Python packages:
