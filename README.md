@@ -1,5 +1,5 @@
 # anonymous
-# Telegram Bot
+##Telegram Bot
 
 This is a Telegram bot that performs various functions:
 
@@ -32,7 +32,7 @@ git clone https://github.com/nabileus/anonymous
     python bot.py
 ```
     
-Usage
+##Usage
 The bot responds to the following commands:
 
 '/start': Welcomes the user to the bot.
