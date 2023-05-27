@@ -19,6 +19,7 @@ This is a Telegram bot that performs various functions:
 
 ```shell
 git clone https://github.com/your-repository.git
+```shell
 
 2.Install the required Python packages:
     pip install -r requirements.txt
