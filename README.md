@@ -36,5 +36,6 @@ git clone https://github.com/nabileus/anonymous
 The bot responds to the following commands:
 
 '/start': Welcomes the user to the bot.
+
 '/write <text>': Generates an image based on the provided text.
 When an audio file or text is sent to the bot, it processes the audio or generates an image accordingly.
