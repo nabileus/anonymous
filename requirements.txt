@@ -1,0 +1,5 @@
+telebot
+librosa
+soundfile
+numpy
+Pillow
