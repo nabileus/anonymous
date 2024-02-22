@@ -107,7 +107,7 @@ def generate_image(text):
     font = ImageFont.truetype("assfont.ttf", 30)
     x, y = 150, 140
     lines = text.split("\n")
-    line_height = font.getsize("hg")[1]
+    line_height = 45
     for line in lines:
         draw.text((x, y), line, fill=(1, 22, 55), font=font)
         y = y + line_height - 5
