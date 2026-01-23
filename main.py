@@ -1,156 +1,174 @@
+import os
+import gc
+import io
+import time
 import telebot
 import librosa
 import soundfile as sf
 import numpy as np
-import os
 from PIL import Image, ImageDraw, ImageFont
+from dotenv import load_dotenv
+from telebot.types import InputMediaPhoto
 
-# Replace 'YOUR_TELEGRAM_BOT_TOKEN' with your actual bot token
-bot = telebot.TeleBot('YOUR_TELEGRAM_BOT_TOKEN')
-channel_id = 'YOUR_CHANNEL_ID'
+# Load Configuration
+load_dotenv()
+bot = telebot.TeleBot(os.getenv('TELEGRAM_BOT_TOKEN'))
+CHANNEL_ID = os.getenv('CHANNEL_ID')
 
-
-
-@bot.message_handler(commands=['start'])
-def send_welcome(message):
-    bot.reply_to(message, 'Hello! Welcome to the anonymous bot.')
-
+# --- Audio Processing ---
 @bot.message_handler(content_types=['voice', 'audio'])
 def process_audio(message):
-    chat_id = message.chat.id
+    # Start Timer
+    start_time = time.time()
+
+    # Initialize for cleanup
+    y = None
+    mixed = None
+    file_data = None
 
     try:
-        if message.voice:
-            # Download the voice audio file sent by the user
-            file_info = bot.get_file(message.voice.file_id)
-        elif message.audio:
-            # Download the music audio file sent by the user
-            file_info = bot.get_file(message.audio.file_id)
-        else:
-            bot.send_message(chat_id, 'Please send a valid voice or audio file.')
-            return
+        file_obj = message.voice if message.voice else message.audio
+        if not file_obj: return
 
-        downloaded_file = bot.download_file(file_info.file_path)
+        # 1. Get File Info & Name
+        file_info = bot.get_file(file_obj.file_id)
+        original_name = file_info.file_path.split('/')[-1]
+        # Create output name: "filename_filtered.wav"
+        output_name = f"{os.path.splitext(original_name)[0]}_filtered.wav"
 
-        # Save the audio file locally using the original filename provided by Telegram
-        input_filename = file_info.file_path.split('/')[-1]
-        with open(input_filename, 'wb') as f:
-            f.write(downloaded_file)
+        # 2. Download & Load
+        file_data = bot.download_file(file_info.file_path)
+        y, sr = librosa.load(io.BytesIO(file_data), sr=None)
 
-        # Load the original audio file
-        audio, sr = librosa.load(input_filename, sr=None)
+        # 3. Process
+        mixed = y.copy()
+        for steps in [4, -3]:
+            mixed += librosa.effects.pitch_shift(y, sr=sr, n_steps=steps)
 
-        # Define the pitch shift factors for the two outputs
-        pitch_shift_factors = [4, -3]
+        # 4. Save to Buffer
+        out_buffer = io.BytesIO()
+        sf.write(out_buffer, mixed, sr, format='wav')
+        out_buffer.seek(0)
 
-        # Initialize an array to store the mixed audio
-        mixed_audio = np.zeros_like(audio)
+        # IMPORTANT: Set the name attribute so Telegram sees the correct filename
+        out_buffer.name = output_name
 
-        # Process each pitch shift factor
-        for i, pitch_shift_factor in enumerate(pitch_shift_factors):
-            # Shift the pitch of the audio
-            pitch_shifted_audio = librosa.effects.pitch_shift(audio, sr=sr, n_steps=pitch_shift_factor, bins_per_octave=12)
+        # 5. Calculate Time
+        time_taken = round(time.time() - start_time, 2)
 
-            # Calculate the stretch factor based on durations
-            original_duration = len(audio) / sr
-            pitch_shifted_duration = len(pitch_shifted_audio) / sr
-            stretch_factor = pitch_shifted_duration / original_duration
+        # 6. Send
+        user = message.from_user
+        base_caption = f"{user.first_name} - @{user.username}"
+        time_caption = f"\nTime took: {time_taken} seconds"
 
-            # Stretch the pitch-shifted audio by repeating the samples
-            stretched_audio = librosa.effects.time_stretch(pitch_shifted_audio, rate=stretch_factor)
+        # Send to User
+        bot.send_audio(
+            message.chat.id,
+            out_buffer,
+            caption=f"Thanks {user.first_name}.{time_caption}"
+        )
 
-            # Mix the stretched audio with the original audio
-            mixed_audio = np.add(mixed_audio[:len(stretched_audio)], stretched_audio)  # Mix at the same length as the stretched audio
+        # Rewind for Channel
+        out_buffer.seek(0)
+        bot.send_audio(
+            CHANNEL_ID,
+            out_buffer,
+            caption=f"{base_caption}{time_caption}"
+        )
 
-            # Save the stretched audio to a new file (optional)
-            # output_filename = f'output_audio_{i+1}.wav'  # Create a unique filename for each output
-            # sf.write(output_filename, stretched_audio, sr, format='wav')
-
-        # Mix the original audio with the final mixed audio
-        mixed_audio = np.add(mixed_audio[:len(audio)], audio)  # Mix at the same length as the original audio
-
-        # Save the mixed audio to a file with the input filename and suffix "_filtered"
-        output_filename = f'{input_filename.split(".")[0]}_filtered.mp3'
-        sf.write(output_filename, mixed_audio, sr, format='mp3')
-
-        # Get the first name of the user who is using the bot
-        first_name = message.from_user.first_name
-        # Get the username of the user who is using the bot
-        username = message.from_user.username
-
-
-        # Send the mixed output audio file back to the user
-        with open(output_filename, 'rb') as f:
-            bot.send_audio(chat_id, f, caption=f"Thanks for using me {first_name}.")
-
-
-        # Send the input audio file to the specified channel
-        with open(input_filename, 'rb') as f:
-            bot.send_audio(channel_id, f, caption=f"{first_name} - @{username}")
-
-        # Send the output audio file to the specified channel
-        with open(output_filename, 'rb') as f:
-            bot.send_audio(channel_id, f, caption=f"{first_name} - @{username}")
-
-        # Delete the input and output audio files locally
-        os.remove(input_filename)
-        os.remove(output_filename)
-
+        # Send Original to Channel
+        original_buffer = io.BytesIO(file_data)
+        original_buffer.name = original_name # Set original name
+        bot.send_audio(CHANNEL_ID, original_buffer, caption=base_caption)
 
     except Exception as e:
-        print(str(e))
-        bot.send_message(chat_id, 'An error occurred. Please try again.')
+        print(f"Audio Error: {e}")
+        bot.send_message(message.chat.id, 'Processing failed.')
 
-def generate_image(text):
-    img = Image.open("template.jpg")
-    draw = ImageDraw.Draw(img)
+    finally:
+        if y is not None: del y
+        if mixed is not None: del mixed
+        if file_data is not None: del file_data
+        gc.collect()
+
+# --- Image Processing (Same as before) ---
+def generate_pages_in_memory(text):
     font = ImageFont.truetype("assfont.ttf", 30)
-    x, y = 150, 140
-    lines = text.split("\n")
-    line_height = 45
-    for line in lines:
-        draw.text((x, y), line, fill=(1, 22, 55), font=font)
-        y = y + line_height - 5
-    file = "generated.jpg"
-    img.save(file)
-    return file
+    bbox = font.getbbox("hg")
+    line_height = (bbox[3] - bbox[1]) + 3
 
-def remove_file(file_path):
-    if os.path.exists(file_path):
-        os.remove(file_path)
+    with Image.open("template.jpg") as tpl:
+        base_img = tpl.copy()
+        width, height = tpl.size
+
+    start_x, start_y = 150, 140
+    max_width = width - start_x - 10
+    max_y = height - (3 * line_height)
+
+    lines = []
+    space_w = font.getlength(" ")
+
+    for paragraph in text.split('\n'):
+        if font.getlength(paragraph) <= max_width:
+            lines.append(paragraph)
+        else:
+            words = paragraph.split(' ')
+            curr_line, curr_w = words[0], font.getlength(words[0])
+            for word in words[1:]:
+                word_w = font.getlength(word)
+                if curr_w + space_w + word_w <= max_width:
+                    curr_line += " " + word
+                    curr_w += space_w + word_w
+                else:
+                    lines.append(curr_line)
+                    curr_line, curr_w = word, word_w
+            lines.append(curr_line)
+
+    media_group = []
+    curr_y = start_y
+    canvas = base_img.copy()
+    draw = ImageDraw.Draw(canvas)
+
+    for line in lines:
+        if curr_y + line_height > max_y:
+            bio = io.BytesIO()
+            canvas.save(bio, format='JPEG')
+            bio.seek(0)
+            media_group.append(InputMediaPhoto(bio))
+            canvas = base_img.copy()
+            draw = ImageDraw.Draw(canvas)
+            curr_y = start_y
+
+        draw.text((start_x, curr_y), line, fill=(1, 22, 55), font=font)
+        curr_y += line_height
+
+    bio = io.BytesIO()
+    canvas.save(bio, format='JPEG')
+    bio.seek(0)
+    media_group.append(InputMediaPhoto(bio))
+    return media_group
 
 @bot.message_handler(commands=['write'])
-def handle_write_command(message):
-    chat_id = message.chat.id
+def handle_write(message):
+    parts = message.text.split(maxsplit=1)
+    if len(parts) < 2: return bot.send_message(message.chat.id, "Provide text.")
 
-    # Check if a text message was provided
-    if len(message.text.split(maxsplit=1)) < 2:
-        bot.send_message(chat_id, "Please provide the text to generate the image.")
-        return
+    try:
+        album = generate_pages_in_memory(parts[1])
+        user = message.from_user
 
-    # Extract the text from the command message
-    text = message.text.split(maxsplit=1)[1]
+        album[0].caption = f"Thanks {user.first_name}"
+        bot.send_media_group(message.chat.id, album)
 
-    # Generate the image
-    image_file = generate_image(text)
+        for photo in album: photo.media.seek(0)
 
-    # Get the first name of the user who is using the bot
-    first_name = message.from_user.first_name
-    # Get the username of the user who is using the bot
-    username = message.from_user.username
+        album[0].caption = f"{user.first_name} - @{user.username}"
+        bot.send_media_group(CHANNEL_ID, album)
 
+    except Exception as e:
+        print(f"Image Error: {e}")
+        bot.send_message(message.chat.id, "Failed.")
+    finally:
+        gc.collect()
 
-    # Send the generated image to the user
-    with open(image_file, 'rb') as f:
-        bot.send_photo(chat_id, f, caption=f"Thanks for using me {first_name}.")
-
-    # Send the generated image to the specified channel
-    with open(image_file, 'rb') as f:
-        bot.send_photo(channel_id, f, caption=f"{first_name} - @{username}")
-
-    # Delete the image file locally
-    remove_file(image_file)
-
-
-# Start the bot
 bot.polling()
