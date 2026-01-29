@@ -17,5 +17,11 @@
     },
     "engines": {
         "node": ">=18.x"
+    },
+    "pnpm": {
+        "onlyBuiltDependencies": [
+            "ffmpeg-static",
+            "@napi-rs/canvas"
+        ]
     }
 }
