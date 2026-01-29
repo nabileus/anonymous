@@ -2,19 +2,22 @@
     "name": "anonymous-bot-js",
     "version": "1.0.0",
     "description": "Telegram bot converted to Node.js for Vercel",
-    "main": "api/webhook.js",
+    "main": "api/bot.js",
     "scripts": {
-        "start": "node api/webhook.js",
+        "start": "node api/bot.js",
         "dev": "node dev-server.js"
     },
     "dependencies": {
-        "grammy": "^1.20.0",
+        "@telegraf/types": "^9.2.1",
+        "abort-controller": "^3.0.0",
+        "node-fetch": "^3.3.2",
+        "telegraf": "^4.4.2",
+        "telegraph-node": "^1.0.0",
         "@napi-rs/canvas": "^0.1.44",
         "fluent-ffmpeg": "^2.1.2",
         "ffmpeg-static": "^5.2.0",
         "ffprobe-static": "^3.1.0",
-        "dotenv": "^16.4.1",
-        "axios": "^1.6.0"
+        "dotenv": "^16.4.1"
     },
     "engines": {
         "node": ">=18.x"
