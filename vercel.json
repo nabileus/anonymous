@@ -1,20 +1,3 @@
 {
-    "version": 2,
-    "builds": [
-        {
-            "src": "api/bot.js",
-            "use": "@vercel/node",
-            "config": {
-                "includeFiles": [
-                    "service_account_key.json"
-                ]
-            }
-        }
-    ],
-    "routes": [
-        {
-            "src": "/api/bot",
-            "dest": "/api/bot.js"
-        }
-    ]
+    "version": 2
 }
