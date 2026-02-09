@@ -1,41 +1,87 @@
-# anonymous
-## Telegram Bot
+# Anonymous Telegram Bot
 
-This is a Telegram bot that performs various functions:
+This bot performs two main functions:
 
-1. Audio Processing:
-   - Accepts voice or audio files from users
-   - Applies an anonymous effect that L used in 'Death Note'
-   - Sends the processed audio back to the user and a specified channel
+1. **Audio Processing**: Applies a "Death Note L" voice effect to audio/voice messages.
+2. **Handwriting Generation**: Converts text into handwritten-style images on a template.
 
-2. Image Generation:
-   - Accepts text input from users using the '/write' command
-   - Generates an anonymous handwritten text image on a page based on the input text
-   - Sends the generated image back to the user and a specified channel
+## Implementations
 
-## Setup
+This project contains two versions of the bot:
 
-1. Clone the repository:
+- **Node.js (Recommended)**: Designed for serverless deployment on Vercel or local development.
+- **Python**: Designed for long-polling on a traditional server.
 
-```shell
-git clone https://github.com/nabileus/anonymous
-```
+---
 
-2.Install the required Python packages:
-```shell
-    pip install -r requirements.txt
-```
-3.Replace 'YOUR_TELEGRAM_BOT_TOKEN' in the code with your actual bot token.
-4.Replace 'YOUR_CHANNEL_ID' in the code with the ID of the channel where you want to send the files.
-5.Run the bot:
-```shell
-    python bot.py
-```
-    
+## 🚀 Hosting on Vercel (Node.js)
+
+The Node.js version is optimized for Vercel using Webhooks.
+
+### 1. Prerequisites
+
+- A [Vercel](https://vercel.com/) account.
+- [Vercel CLI](https://vercel.com/docs/cli) installed (`npm i -g vercel`).
+- A Telegram Bot Token from [@BotFather](https://t.me/BotFather).
+
+### 2. Deployment
+
+1. Clone the repository and navigate to the project folder.
+2. Run `vercel` to deploy:
+
+   ```shell
+   vercel
+   ```
+
+3. After deployment, you will get a production URL (e.g., `https://your-bot.vercel.app`).
+
+### 3. Environment Variables
+
+In your Vercel Project Dashboard, add the following environment variables:
+
+- `TELEGRAM_BOT_TOKEN`: Your bot token.
+- `CHANNEL_ID`: (Optional) The ID of the channel to log messages to (e.g., `-100123456789`).
+
+### 4. Setting the Webhook
+
+You must tell Telegram where to send updates. Replace `<TOKEN>` and `<URL>` in the following link and open it in your browser:
+`https://api.telegram.org/bot<TOKEN>/setWebhook?url=<URL>/api/webhook`
+
+---
+
+## 💻 Local Development (Node.js)
+
+1. Install dependencies:
+
+   ```shell
+   npm install
+   ```
+
+2. Create a `.env` file with your `TELEGRAM_BOT_TOKEN` and `CHANNEL_ID`.
+3. Run the development server (uses long-polling):
+
+   ```shell
+   npm run dev
+   ```
+
+---
+
+## 🐍 Python Version (Long Polling)
+
+1. Install dependencies:
+
+   ```shell
+   pip install -r requirements.txt
+   ```
+
+2. Create a `.env` file with your `TELEGRAM_BOT_TOKEN` and `CHANNEL_ID`.
+3. Run the bot:
+
+   ```shell
+   python main.py
+   ```
+
 ## Usage
-The bot responds to the following commands:
 
-'/start': Welcomes the user to the bot.
-
-'/write <text>': Generates an image based on the provided text.
-When an audio file or text is sent to the bot, it processes the audio or generates an image accordingly.
+- **Audio Effect**: Send any **Voice** or **Audio** message to the bot. It will process it and send back the modified version.
+- **Handwriting**: Use the `/write <text>` command to generate handwritten images.
